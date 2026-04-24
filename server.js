@@ -30,11 +30,14 @@ async function askGPT(prompt) {
 }
 
 async function askGemini(prompt) {
-  const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
-  const res = await model.generateContent(prompt);
-  return res.response.text();
+  try {
+    const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const res = await model.generateContent(prompt);
+    return res.response.text();
+  } catch (e) {
+    return "Gemini 일시 중지 중 (한도 초과)";
+  }
 }
-
 // 병렬 모드
 app.post("/api/parallel", async (req, res) => {
   const { question } = req.body;
