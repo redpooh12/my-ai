@@ -2,7 +2,6 @@ import express from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import "dotenv/config";
 
 const app = express();
 app.use(express.json());
