@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 채팅</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    h1 { margin-bottom: 16px; font-size: 24px; color: #333; }
+    .mode-btns { display: flex; gap: 10px; margin-bottom: 16px; }
+    .mode-btns button { padding: 8px 20px; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; background: #ddd; color: #333; }
+    .mode-btns button.active { background: #4f46e5; color: white; }
+    .chat-box { width: 100%; max-width: 800px; flex: 1; overflow-y: auto; background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .msg { margin-bottom: 20px; }
+    .msg.user { text-align: right; }
+    .msg.user span { background: #4f46e5; color: white; padding: 10px 16px; border-radius: 18px 18px 4px 18px; display: inline-block; max-width: 70%; }
+    .ai-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card { border-radius: 12px; padding: 14px; font-size: 14px; line-height: 1.6; }
+    .card.claude { background: #f3f0ff; border: 1px solid #c4b5fd; }
+    .card.gpt { background: #f0fdf4; border: 1px solid #86efac; }
+    .card.gemini { background: #fff7ed; border: 1px solid #fdba74; }
+    .card h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .card.claude h3 { color: #6d28d9; }
+    .card.gpt h3 { color: #16a34a; }
+    .card.gemini h3 { color: #ea580c; }
+    .serial-steps { display: flex; flex-direction: column; gap: 10px; }
+    .step { background: #f8fafc; border-left: 4px solid #4f46e5; padding: 12px; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.6; }
+    .step h3 { font-size: 13px; color: #4f46e5; margin-bottom: 6px; }
+    .input-row { display: flex; gap: 10px; width: 100%; max-width: 800px; }
+    .input-row input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 24px; font-size: 15px; outline: none; }
+    .input-row input:focus { border-color: #4f46e5; }
+    .input-row button { padding: 12px 24px; background: #4f46e5; color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 15px; }
+    .loading { color: #888; font-size: 14px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>🤖 AI 채팅</h1>
+  <div class="mode-btns">
+    <button id="btn-parallel" class="active" onclick="setMode('parallel')">병렬 모드</button>
+    <button id="btn-serial" onclick="setMode('serial')">직렬 모드</button>
+  </div>
+  <div class="chat-box" id="chat"></div>
+  <div class="input-row">
+    <input id="input" type="text" placeholder="질문을 입력하세요..." onkeydown="if(event.key==='Enter') send()">
+    <button onclick="send()">전송</button>
+  </div>
+
+  <script>
+    let mode = "parallel";
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById("btn-parallel").classList.toggle("active", m === "parallel");
+      document.getElementById("btn-serial").classList.toggle("active", m === "serial");
+    }
+
+    async function send() {
+      const input = document.getElementById("input");
+      const chat = document.getElementById("chat");
+      const question = input.value.trim();
+      if (!question) return;
+      input.value = "";
+
+      chat.innerHTML += `<div class="msg user"><span>${question}</span></div>`;
+      chat.innerHTML += `<div class="loading" id="loading">AI가 생각 중...</div>`;
+      chat.scrollTop = chat.scrollHeight;
+
+      const res = await fetch(`/api/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const data = await res.json();
+      document.getElementById("loading").remove();
+
+      if (mode === "parallel") {
+        chat.innerHTML += `
+          <div class="msg">
+            <div class="ai-cards">
+              <div class="card claude"><h3>🟣 Claude</h3>${data.Claude}</div>
+              <div class="card gpt"><h3>🟢 GPT</h3>${data.GPT}</div>
+              <div class="card gemini"><h3>🟠 Gemini</h3>${data.Gemini}</div>
+            </div>
+          </div>`;
+      } else {
+        chat.innerHTML += `
+          <div class="msg">
+            <div class="serial-steps">
+              <div class="step"><h3>🟣 Claude 초안</h3>${data.draft}</div>
+              <div class="step"><h3>🟢 GPT 보완</h3>${data.improved}</div>
+              <div class="step"><h3>🟠 Gemini 최종</h3>${data.final}</div>
+            </div>
+          </div>`;
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>
